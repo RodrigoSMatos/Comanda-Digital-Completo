@@ -1,6 +1,7 @@
 package com.ibeus.Comanda.Digital.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 @Entity
@@ -18,6 +19,7 @@ public class OrderItem {
     private Integer quantity;   // Quantidade pedida
 
     @ManyToOne
+    @JsonIgnore
     @JoinColumn(name = "order_id")
     private Order order;        // Ligação com o pedido
 }
