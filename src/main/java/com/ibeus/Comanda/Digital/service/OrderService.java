@@ -17,7 +17,8 @@ public class OrderService {
     @Autowired
     private DishRepository dishRepository;
 
-    // Criar pedido
+    // Cria um novo pedido a partir dos itens enviados pelo cliente
+    // Calcula o total, vincula preços e nomes dos pratos e associa os itens ao pedido
     public Order createOrder(List<OrderItem> items) {
         double total = 0.0;
 
@@ -25,39 +26,40 @@ public class OrderService {
             Dish dish = dishRepository.findById(item.getDishId())
                     .orElseThrow(() -> new RuntimeException("Dish not found: " + item.getDishId()));
 
-            item.setDishName(dish.getName());
-            item.setUnitPrice(dish.getPrice());
-            total += dish.getPrice() * item.getQuantity();
+            item.setDishName(dish.getName()); // nome do prato exibido no histórico e no carrinho
+            item.setUnitPrice(dish.getPrice()); // captura o preço atual do prato
+            total += dish.getPrice() * item.getQuantity(); // acumula o valor total do carrinho
         }
 
         Order order = new Order();
         order.setTotal(total);
 
-        // associa cada item ao pedido
+        // associa cada item ao pedido criado
         for (OrderItem item : items) {
             item.setOrder(order);
         }
 
         order.setItems(items);
-        return orderRepository.save(order);
+        return orderRepository.save(order); // persiste o pedido no banco
     }
 
-    // Buscar todos os pedidos
+    // Retorna todos os pedidos cadastrados (usado no admin/cozinha)
     public List<Order> findAll() {
         return orderRepository.findAll();
     }
 
-    // Buscar por status
+    // Retorna pedidos filtrados por status (ex.: apenas PREPARING)
     public List<Order> findByStatus(OrderStatus status) {
         return orderRepository.findByStatus(status);
     }
 
-    // Buscar por múltiplos status (usado na cozinha/motoboy)
+    // Retorna pedidos que estejam em qualquer um dos status informados
+    // Útil para cozinha (PREPARING, READY) ou para o motoboy (READY, EN_ROUTE)
     public List<Order> findByStatusIn(List<OrderStatus> statuses) {
         return orderRepository.findByStatusIn(statuses);
     }
 
-    // OrderService.java
+    // Atualiza o status do pedido seguindo regras de fluxo (cozinha → entrega → histórico)
     public Order updateStatus(Long id, OrderStatus newStatus) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -76,7 +78,8 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    // Permite somente as transições do fluxo definido
+    // Define quais transições de status são permitidas no fluxo do pedido
+    // Ex.: CREATED → PREPARING → READY → EN_ROUTE → DELIVERED
     private boolean isValidTransition(OrderStatus current, OrderStatus next) {
         switch (current) {
             case CREATED:
